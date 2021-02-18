@@ -1,0 +1,53 @@
+version: '3'
+services:
+  nginx:
+    container_name: ${PROJECT_NAME}-server
+    build: ./.docker/nginx
+    ports:
+      - "${APP_PORT}:8012"
+    depends_on:
+      - app
+    networks:
+      - app-ws
+    stdin_open: true
+    tty: true
+  database:
+    container_name: ${PROJECT_NAME}-db
+    image: mariadb:10.3
+    restart: unless-stopped
+    environment:
+      MYSQL_USER: root
+      MYSQL_DATABASE: "${PROJECT_NAME}"
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: "Asia/Manila"
+      PGTZ: "Asia/Manila"
+    ports:
+      - "${DB_PORT}:3306"
+    volumes:
+      - ./.docker/db-data:/var/lib/mysql:delegated
+    networks:
+      - app-ws
+  app:
+    container_name: ${PROJECT_NAME}-app
+    build: .
+    environment:
+      NODE_ENV: staging
+      TZ: "Asia/Manila"
+    volumes:
+      - ./project:/app
+      - /app/node_modules
+      - ./project/tmp:/app/tmp
+    networks:
+      - app-ws
+    stdin_open: true
+    tty: true
+    depends_on:
+      - database
+networks:
+  app-ws:
+    driver: bridge
+volumes:
+  db-data:
+      driver: local
